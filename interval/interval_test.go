@@ -17,6 +17,8 @@ func TestIntervals(t *testing.T) {
 		want [][]string
 	}{
 		{
+			// Test case derived from figure 2 in C. Cifuentes, "Structuring
+			// Decompiled Graphs", 1996.
 			path: "testdata/structuring_decompiled_graphs_figure_2.dot",
 			want: [][]string{
 				[]string{"B1", "B2", "B3", "B4", "B5"},
@@ -25,6 +27,8 @@ func TestIntervals(t *testing.T) {
 			},
 		},
 		{
+			// Test case derived from figure 2 in F. Allen, "Control Flow
+			// Analysis", 1970.
 			path: "testdata/control_flow_analysis_figure_2.dot",
 			want: [][]string{
 				[]string{"1"},
@@ -75,6 +79,8 @@ func TestDerivedSeq(t *testing.T) {
 		want []string
 	}{
 		{
+			// Test case derived from figure 3 in C. Cifuentes, "Structuring
+			// Decompiled Graphs", 1996.
 			path: "testdata/structuring_decompiled_graphs_figure_2.dot",
 			want: []string{
 				"testdata/structuring_decompiled_graphs_figure_2.dot.G1.golden",
@@ -84,6 +90,8 @@ func TestDerivedSeq(t *testing.T) {
 			},
 		},
 		{
+			// Test case derived from figure 4 in F. Allen, "Control Flow
+			// Analysis", 1970.
 			path: "testdata/control_flow_analysis_figure_2.dot",
 			want: []string{
 				"testdata/control_flow_analysis_figure_2.dot.G1.golden",
