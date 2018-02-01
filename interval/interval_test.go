@@ -2,8 +2,10 @@ package interval
 
 import (
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/graphism/exp/cfg"
@@ -60,6 +62,48 @@ func TestIntervals(t *testing.T) {
 			sort.Strings(got)
 			sort.Strings(want)
 			if !reflect.DeepEqual(got, want) {
+				t.Errorf("%q; output mismatch; expected `%s`, got `%s`", gold.path, want, got)
+				continue
+			}
+		}
+	}
+}
+
+func TestDerivedSeq(t *testing.T) {
+	golden := []struct {
+		path string
+		want []string
+	}{
+		{
+			path: "testdata/structuring_decompiled_graphs_figure_2.dot",
+			want: []string{
+				"testdata/structuring_decompiled_graphs_figure_2.dot.G1.golden",
+				"testdata/structuring_decompiled_graphs_figure_2.dot.G2.golden",
+				"testdata/structuring_decompiled_graphs_figure_2.dot.G3.golden",
+				"testdata/structuring_decompiled_graphs_figure_2.dot.G4.golden",
+			},
+		},
+	}
+	for _, gold := range golden {
+		in, err := cfg.ParseFile(gold.path)
+		if err != nil {
+			t.Errorf("%q; unable to parse file; %v", gold.path, err)
+			continue
+		}
+		gs, _ := DerivedSeq(in)
+		if len(gs) != len(gold.want) {
+			t.Errorf("%q: number of derived graphs mismatch; expected %d, got %d", gold.path, len(gold.want), len(gs))
+			continue
+		}
+		for i, g := range gs {
+			buf, err := ioutil.ReadFile(gold.want[i])
+			if err != nil {
+				t.Errorf("%q; unable to read file; %v", gold.path, err)
+				continue
+			}
+			want := strings.TrimSpace(string(buf))
+			got := g.String()
+			if got != want {
 				t.Errorf("%q; output mismatch; expected `%s`, got `%s`", gold.path, want, got)
 				continue
 			}
