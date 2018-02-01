@@ -1,0 +1,8 @@
+digraph G3 {
+	// Node definitions.
+	G2_I1 [label=entry];
+	G2_I2;
+
+	// Edge definitions.
+	G2_I1 -> G2_I2;
+}

@@ -83,6 +83,15 @@ func TestDerivedSeq(t *testing.T) {
 				"testdata/structuring_decompiled_graphs_figure_2.dot.G4.golden",
 			},
 		},
+		{
+			path: "testdata/control_flow_analysis_figure_2.dot",
+			want: []string{
+				"testdata/control_flow_analysis_figure_2.dot.G1.golden",
+				"testdata/control_flow_analysis_figure_2.dot.G2.golden",
+				"testdata/control_flow_analysis_figure_2.dot.G3.golden",
+				"testdata/control_flow_analysis_figure_2.dot.G4.golden",
+			},
+		},
 	}
 	for _, gold := range golden {
 		in, err := cfg.ParseFile(gold.path)
