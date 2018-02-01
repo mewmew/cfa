@@ -22,7 +22,7 @@ func Intervals(g *cfg.Graph) []*Interval {
 	var Is []*Interval
 	// H = {h}
 	H := newQueue()
-	H.push(g.Entry())
+	H.push(node(g.Entry()))
 	// for (all unprocessed n ∈ H) do
 	for !H.empty() {
 		n := H.pop()
@@ -56,7 +56,7 @@ func Intervals(g *cfg.Graph) []*Interval {
 			}
 			for _, p := range g.To(m) {
 				if I.Has(p) {
-					H.push(m)
+					H.push(node(m))
 					break
 				}
 			}
@@ -77,7 +77,7 @@ type Interval struct {
 	// Control flow graph containing I(h).
 	g *cfg.Graph
 	// Header node.
-	h graph.Node
+	h *cfg.Node
 	// Nodes of the interval.
 	nodes map[graph.Node]bool
 }
@@ -109,7 +109,7 @@ func (I *Interval) To(n graph.Node) []graph.Node {
 // String returns a string representation of the interval.
 func (I *Interval) String() string {
 	buf := &bytes.Buffer{}
-	fmt.Fprintf(buf, "I(%v): {", I.h.(*cfg.Node).DOTID())
+	fmt.Fprintf(buf, "I(%v): {", I.h.DOTID())
 	var ids []string
 	for n := range I.nodes {
 		id := n.(*cfg.Node).DOTID()
@@ -127,7 +127,7 @@ func (I *Interval) String() string {
 }
 
 // newInterval returns a new interval I(h) with header node h.
-func newInterval(g *cfg.Graph, h graph.Node) *Interval {
+func newInterval(g *cfg.Graph, h *cfg.Node) *Interval {
 	return &Interval{
 		g: g,
 		h: h,
@@ -160,7 +160,7 @@ func (I *Interval) containsAllPreds(n graph.Node) bool {
 // in the queue.
 type queue struct {
 	// List of nodes in queue.
-	l []graph.Node
+	l []*cfg.Node
 	// Current position in queue.
 	i int
 }
@@ -168,13 +168,13 @@ type queue struct {
 // newQueue returns a new FIFO queue.
 func newQueue() *queue {
 	return &queue{
-		l: make([]graph.Node, 0),
+		l: make([]*cfg.Node, 0),
 	}
 }
 
 // push appends the given node to the end of the queue if it has not been in the
 // queue before.
-func (q *queue) push(n graph.Node) {
+func (q *queue) push(n *cfg.Node) {
 	if !q.has(n) {
 		q.l = append(q.l, n)
 	}
@@ -192,7 +192,7 @@ func (q *queue) has(n graph.Node) bool {
 }
 
 // pop pops and returns the first node of the queue.
-func (q *queue) pop() graph.Node {
+func (q *queue) pop() *cfg.Node {
 	if q.empty() {
 		panic("invalid call to pop; empty queue")
 	}
@@ -204,4 +204,9 @@ func (q *queue) pop() graph.Node {
 // empty reports whether the queue is empty.
 func (q *queue) empty() bool {
 	return len(q.l[q.i:]) == 0
+}
+
+// node type asserts the given node to a control flow node.
+func node(n graph.Node) *cfg.Node {
+	return n.(*cfg.Node)
 }
