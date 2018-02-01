@@ -16,6 +16,8 @@ import (
 // Intervals returns the unique set of intervals of the given control flow
 // graph.
 func Intervals(g *cfg.Graph) []*Interval {
+	// Calculate reverse post-order of nodes.
+	cfg.InitDFSOrder(g)
 	// 𝓘 = {}
 	var Is []*Interval
 	// H = {h}
@@ -32,7 +34,7 @@ func Intervals(g *cfg.Graph) []*Interval {
 		//    no more nodes can be added to I(n)
 		for added := true; added; {
 			added = false
-			for _, m := range g.Nodes() {
+			for _, m := range cfg.SortByRevPost(g.Nodes()) {
 				if I.nodes[m] {
 					continue
 				}
@@ -45,7 +47,7 @@ func Intervals(g *cfg.Graph) []*Interval {
 			}
 		}
 		// H = H + {m ∈ G : m ∉ H and m ∉ I(n) and (∃ p = immedPred(m) : p ∈ I(n))}
-		for _, m := range g.Nodes() {
+		for _, m := range cfg.SortByRevPost(g.Nodes()) {
 			if H.has(m) {
 				continue
 			}
