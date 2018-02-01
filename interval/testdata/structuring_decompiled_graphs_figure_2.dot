@@ -1,9 +1,9 @@
-// Sample taken from Fig. 2 in C. Cifuentes' Structuring decompiled graphs [1].
+// Derived from figure 2 in C. Cifuentes, "Structuring Decompiled Graphs", 1996.
 //
-// [1]: https://pdfs.semanticscholar.org/48bf/d31773af7b67f9d1b003b8b8ac889f08271f.pdf
+// https://pdfs.semanticscholar.org/48bf/d31773af7b67f9d1b003b8b8ac889f08271f.pdf
 
 digraph G {
-	// Node definitions.
+	// Nodes.
 	B1 [label=entry];
 	B2;
 	B3;
@@ -20,7 +20,7 @@ digraph G {
 	B14;
 	B15;
 
-	// Edge definitions.
+	// Edges.
 	B1 -> B2;
 	B1 -> B5;
 	B2 -> B3;

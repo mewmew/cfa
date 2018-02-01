@@ -15,11 +15,20 @@ func TestIntervals(t *testing.T) {
 		want [][]string
 	}{
 		{
-			path: "testdata/sample.dot",
+			path: "testdata/structuring_decompiled_graphs_figure_2.dot",
 			want: [][]string{
 				[]string{"B1", "B2", "B3", "B4", "B5"},
 				[]string{"B6", "B7", "B8", "B9", "B10", "B11", "B12"},
 				[]string{"B13", "B14", "B15"},
+			},
+		},
+		{
+			path: "testdata/control_flow_analysis_figure_2.dot",
+			want: [][]string{
+				[]string{"1"},
+				[]string{"2"},
+				[]string{"3", "4", "5", "6"},
+				[]string{"7", "8"},
 			},
 		},
 	}

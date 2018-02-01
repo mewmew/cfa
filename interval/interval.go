@@ -1,6 +1,7 @@
-// Package interval implements control flow recovery based on the interval
-// method, as described in C. Cifuentes, "A Structuring Algorithm for
+// Find the unique set of intervals of a control flow graph, as described in
+// figure 1 "Interval Algorithm" in C. Cifuentes, "A Structuring Algorithm for
 // Decompilation", 1993.
+
 package interval
 
 import (
@@ -12,11 +13,8 @@ import (
 	"gonum.org/v1/gonum/graph"
 )
 
-// Analyze analyzes the given control flow graph using the interval method.
-func Analyze(g *cfg.Graph) {
-}
-
-// Intervals returns the intervals of the given control flow graph.
+// Intervals returns the unique set of intervals of the given control flow
+// graph.
 func Intervals(g *cfg.Graph) []*Interval {
 	// 𝓘 = {}
 	var Is []*Interval
@@ -106,6 +104,26 @@ func (I *Interval) To(n graph.Node) []graph.Node {
 	return I.g.To(n)
 }
 
+// String returns a string representation of the interval.
+func (I *Interval) String() string {
+	buf := &bytes.Buffer{}
+	fmt.Fprintf(buf, "I(%v): {", I.h.(*cfg.Node).DOTID())
+	var ids []string
+	for n := range I.nodes {
+		id := n.(*cfg.Node).DOTID()
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for i, id := range ids {
+		if i != 0 {
+			buf.WriteString(" ")
+		}
+		buf.WriteString(id)
+	}
+	buf.WriteString("}")
+	return buf.String()
+}
+
 // newInterval returns a new interval I(h) with header node h.
 func newInterval(g *cfg.Graph, h graph.Node) *Interval {
 	return &Interval{
@@ -132,26 +150,6 @@ func (I *Interval) containsAllPreds(n graph.Node) bool {
 		}
 	}
 	return true
-}
-
-// String returns a string representation of the interval.
-func (I *Interval) String() string {
-	buf := &bytes.Buffer{}
-	fmt.Fprintf(buf, "I(%v): {", I.h.(*cfg.Node).DOTID())
-	var ids []string
-	for n := range I.nodes {
-		id := n.(*cfg.Node).DOTID()
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	for i, id := range ids {
-		if i != 0 {
-			buf.WriteString(" ")
-		}
-		buf.WriteString(id)
-	}
-	buf.WriteString("}")
-	return buf.String()
 }
 
 // ### [ Helper functions ] ####################################################
