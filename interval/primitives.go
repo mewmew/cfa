@@ -4,6 +4,7 @@ import "github.com/graphism/exp/cfg"
 
 // Primitives records the control flow primitives of a function.
 type Primitives struct {
+	// TODO: include information about the nodes contained within each interval.
 	// Loops.
 	Loops []*Loop `json:"loops"`
 	// TODO: Add if-statements.
