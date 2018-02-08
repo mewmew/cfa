@@ -21,9 +21,16 @@ var (
 )
 
 // Analyze analyzes the given control flow graph using the interval method.
-func Analyze(g *cfg.Graph) {
+func Analyze(g *cfg.Graph) []Primitive {
+	var prims []Primitive
 	dom := path.Dominators(g.Entry(), g)
-	structLoop(g, dom)
+	// Structure loops.
+	loops := structLoop(g, dom)
+	for _, loop := range loops {
+		prims = append(prims, loop)
+	}
+	// TODO: Structure if-statements.
+	return prims
 }
 
 // === [ DCC ] =================================================================
@@ -31,10 +38,11 @@ func Analyze(g *cfg.Graph) {
 // --- [ structLoops ] ---------------------------------------------------------
 
 // structLoop structures loops in the given control flow graph.
-func structLoop(g *cfg.Graph, dom path.DominatorTree) {
+func structLoop(g *cfg.Graph, dom path.DominatorTree) []*Loop {
 	// Note, the call to DerivedSeq initiates the reverse post-order number of
 	// each node.
 	// For all derived sequences G_i.
+	var loops []*Loop
 	Gs, IIs := DerivedSeq(g)
 	for i, Gi := range Gs {
 		// TODO: Remove when cfa has matured. Useful for debugging.
@@ -65,38 +73,21 @@ func structLoop(g *cfg.Graph, dom path.DominatorTree) {
 				// Check that the node doesn't belong to another loop.
 				if latch.LoopHead == nil {
 					I.h.Latch = latch
-					findNodesInLoop(Gi, I, latch, dom)
-					latch.IsLatch = true
+					loop := findNodesInLoop(Gi, I, latch, dom)
+					loops = append(loops, loop)
+					latch.IsLatch = true // TODO: Remove if not needed.
 				}
 			}
 		}
 	}
-	// TODO: Remove debug output. Instead collect information from control flow
-	// analysis, for each derived graph G^i.
-	//for i := range Gs {
-	//	fmt.Printf("--- [ Gs[%d] ] --------------------------\n", i)
-	//	fmt.Println()
-	//	for _, n := range cfg.SortByRevPost(Gs[i].Nodes()) {
-	//		pretty.Println("node:", n)
-	//		if n.LoopHead != nil {
-	//			pretty.Println("   LoopHead:", n.LoopHead.DOTID())
-	//		}
-	//		if n.Latch != nil {
-	//			pretty.Println("   Latch:", n.Latch.DOTID())
-	//		}
-	//		if n.LoopFollow != nil {
-	//			pretty.Println("   LoopFollow:", n.LoopFollow.DOTID())
-	//		}
-	//	}
-	//	fmt.Println()
-	//}
+	return loops
 }
 
 // --- [ findNodesInLoop ] -----------------------------------------------------
 
 // findNodesInLoop locates the nodes in the loop (latch, I.h) and determines the
 // type of the loop.
-func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.DominatorTree) {
+func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.DominatorTree) *Loop {
 	// Flag nodes in loop headed by head (except header node).
 	I.h.LoopHead = I.h
 	loopNodes := make(map[*cfg.Node]bool)
@@ -192,6 +183,25 @@ func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.Domina
 	default:
 		panic(fmt.Errorf("support for latch node with %d successors not yet implemented", len(latchSuccs)))
 	}
+
+	// Collect information about located loop.
+	follow := ""
+	if I.h.LoopFollow != nil {
+		follow = I.h.LoopFollow.DOTID()
+	}
+	loop := &Loop{
+		Head:   I.h.DOTID(),
+		Latch:  latch.DOTID(),
+		Follow: follow,
+	}
+	var ns []graph.Node
+	for n := range loopNodes {
+		ns = append(ns, n)
+	}
+	for _, n := range cfg.SortByRevPost(ns) {
+		loop.Nodes = append(loop.Nodes, n.DOTID())
+	}
+	return loop
 }
 
 // --- [ isBackEdge ] ----------------------------------------------------------

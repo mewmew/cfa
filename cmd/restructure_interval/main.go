@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/graphism/exp/cfg"
+	"github.com/kr/pretty"
 	"github.com/mewmew/cfa/interval"
 	"github.com/pkg/errors"
 )
@@ -23,7 +24,10 @@ func restructure(dotPath string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	interval.Analyze(g)
+	prims := interval.Analyze(g)
+	for _, prim := range prims {
+		pretty.Println("prim:", prim)
+	}
 	/*
 		for _, n := range cfg.SortByRevPost(g.Nodes()) {
 			pretty.Println("node:", n)
