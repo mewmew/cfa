@@ -22,10 +22,9 @@ var (
 
 // Analyze analyzes the given control flow graph using the interval method.
 func Analyze(g *cfg.Graph) *Primitives {
-	prims := &Primitives{}
-	dom := path.Dominators(g.Entry(), g)
+	prims := NewPrimitives()
 	// Structure loops.
-	prims.Loops = structLoop(g, dom)
+	structLoop(g, prims)
 	// TODO: Structure if-statements.
 	return prims
 }
@@ -35,11 +34,10 @@ func Analyze(g *cfg.Graph) *Primitives {
 // --- [ structLoops ] ---------------------------------------------------------
 
 // structLoop structures loops in the given control flow graph.
-func structLoop(g *cfg.Graph, dom path.DominatorTree) []*Loop {
+func structLoop(g *cfg.Graph, prims *Primitives) {
 	// Note, the call to DerivedSeq initiates the reverse post-order number of
 	// each node.
 	// For all derived sequences G_i.
-	var loops []*Loop
 	Gs, IIs := DerivedSeq(g)
 	for i, Gi := range Gs {
 		// TODO: Remove when cfa has matured. Useful for debugging.
@@ -47,7 +45,15 @@ func structLoop(g *cfg.Graph, dom path.DominatorTree) []*Loop {
 		//	log.Fatalf("%+v", err)
 		//}
 		// For all intervals I_i of G_i.
-		for _, I := range IIs[i] {
+		dom := path.Dominators(Gi.Entry(), Gi)
+		for j, I := range IIs[i] {
+			// Record interval information.
+			intervalName := fmt.Sprintf("G%d_I%d", i, j+1)
+			intervalNodes := nodeNames(cfg.SortByRevPost(I.Nodes()))
+			if prev, ok := prims.Intervals[intervalName]; ok {
+				panic(fmt.Errorf("interval with name %q already present; prev nodes %v, new nodes %v", intervalName, prev, intervalNodes))
+			}
+			prims.Intervals[intervalName] = intervalNodes
 			// Find greatest enclosing back edge (if any).
 			var latch *cfg.Node
 			for _, pred := range cfg.SortByRevPost(Gi.To(I.h)) {
@@ -71,13 +77,13 @@ func structLoop(g *cfg.Graph, dom path.DominatorTree) []*Loop {
 				if latch.LoopHead == nil {
 					I.h.Latch = latch
 					loop := findNodesInLoop(Gi, I, latch, dom)
-					loops = append(loops, loop)
+					// Record loop information.
+					prims.Loops = append(prims.Loops, loop)
 					latch.IsLatch = true // TODO: Remove if not needed.
 				}
 			}
 		}
 	}
-	return loops
 }
 
 // --- [ findNodesInLoop ] -----------------------------------------------------
@@ -215,6 +221,17 @@ func isBackEdge(p, s *cfg.Node) bool {
 		return true
 	}
 	return false
+}
+
+// ### [ Helper functions ] ####################################################
+
+// nodeNames returns the DOTID node names of the given nodes.
+func nodeNames(nodes []*cfg.Node) []string {
+	var ids []string
+	for _, n := range nodes {
+		ids = append(ids, n.DOTID())
+	}
+	return ids
 }
 
 // === [ "A Structuring Algorithm for Decompilation", 1993 ] ===================
