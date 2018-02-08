@@ -1,4 +1,4 @@
-package interval
+package primitive
 
 import "github.com/graphism/exp/cfg"
 

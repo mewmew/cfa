@@ -7,6 +7,7 @@ import (
 
 	"github.com/graphism/exp/cfg"
 	"github.com/mewkiz/pkg/term"
+	"github.com/mewmew/cfa/primitive"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/path"
 )
@@ -21,8 +22,8 @@ var (
 )
 
 // Analyze analyzes the given control flow graph using the interval method.
-func Analyze(g *cfg.Graph) *Primitives {
-	prims := NewPrimitives()
+func Analyze(g *cfg.Graph) *primitive.Primitives {
+	prims := primitive.NewPrimitives()
 	// Structure loops.
 	structLoop(g, prims)
 	// TODO: Structure if-statements.
@@ -34,7 +35,7 @@ func Analyze(g *cfg.Graph) *Primitives {
 // --- [ structLoops ] ---------------------------------------------------------
 
 // structLoop structures loops in the given control flow graph.
-func structLoop(g *cfg.Graph, prims *Primitives) {
+func structLoop(g *cfg.Graph, prims *primitive.Primitives) {
 	// Note, the call to DerivedSeq initiates the reverse post-order number of
 	// each node.
 	// For all derived sequences G_i.
@@ -90,7 +91,7 @@ func structLoop(g *cfg.Graph, prims *Primitives) {
 
 // findNodesInLoop locates the nodes in the loop (latch, I.h) and determines the
 // type of the loop.
-func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.DominatorTree) *Loop {
+func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.DominatorTree) *primitive.Loop {
 	// Flag nodes in loop headed by head (except header node).
 	I.h.LoopHead = I.h
 	loopNodes := make(map[*cfg.Node]bool)
@@ -192,7 +193,7 @@ func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.Domina
 	if I.h.LoopFollow != nil {
 		follow = I.h.LoopFollow.DOTID()
 	}
-	loop := &Loop{
+	loop := &primitive.Loop{
 		Type:   I.h.LoopType,
 		Head:   I.h.DOTID(),
 		Latch:  latch.DOTID(),

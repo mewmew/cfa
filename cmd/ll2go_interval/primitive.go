@@ -1,14 +1,6 @@
 package main
 
-import (
-	"fmt"
-	"go/ast"
-	"go/token"
-
-	"github.com/decomp/decomp/cfa/primitive"
-	"github.com/llir/llvm/ir"
-	"github.com/pkg/errors"
-)
+/*
 
 // prim merges the basic blocks of the given primitive into a corresponding
 // conceputal basic block for the primitive.
@@ -346,3 +338,5 @@ func (d *decompiler) primSeq(entryBlock, exitBlock *basicBlock) (*basicBlock, er
 	block.stmts = append(block.stmts, d.stmts(exitBlock)...)
 	return block, nil
 }
+
+*/

@@ -31,9 +31,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/decomp/decomp/cfa"
-	"github.com/decomp/decomp/cfa/primitive"
-	"github.com/decomp/decomp/graph/cfg"
+	"github.com/graphism/exp/cfg"
 	"github.com/llir/llvm/asm"
 	"github.com/llir/llvm/ir"
 	"github.com/llir/llvm/ir/constant"
@@ -42,6 +40,8 @@ import (
 	"github.com/mewkiz/pkg/osutil"
 	"github.com/mewkiz/pkg/pathutil"
 	"github.com/mewkiz/pkg/term"
+	"github.com/mewmew/cfa/interval"
+	"github.com/mewmew/cfa/primitive"
 	"github.com/pkg/errors"
 	"gonum.org/v1/gonum/graph"
 )
@@ -147,7 +147,7 @@ func ll2go(llPath string, funcNames map[string]bool) (*ast.File, error) {
 		if f.Name == "main" {
 			hasMain = true
 		}
-		var prims []*primitive.Primitive
+		var prims *primitive.Primitives
 		if len(f.Blocks) > 0 {
 			// TODO: Clean up parsing of primitives.
 			//
@@ -354,7 +354,7 @@ func (d *decompiler) pointerToConst(c constant.Constant) ast.Expr {
 
 // funcDecl converts the given LLVM IR function into a corresponding Go function
 // declaration.
-func (d *decompiler) funcDecl(f *ir.Function, prims []*primitive.Primitive) (*ast.FuncDecl, error) {
+func (d *decompiler) funcDecl(f *ir.Function, prims *primitive.Primitives) (*ast.FuncDecl, error) {
 	// Force generate local IDs.
 	_ = f.String()
 
@@ -395,19 +395,23 @@ func (d *decompiler) funcDecl(f *ir.Function, prims []*primitive.Primitive) (*as
 		}
 	}
 
-	// Recover control flow primitives.
-	for _, prim := range prims {
-		block, err := d.prim(prim)
-		if err != nil {
-			return nil, errors.WithStack(err)
+	/*
+
+		// Recover control flow primitives.
+		for _, prim := range prims {
+			block, err := d.prim(prim)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			// Delete merged basic blocks.
+			for _, node := range prim.Nodes {
+				delete(d.blocks, node)
+			}
+			// Add primitive basic block.
+			d.blocks[block.Name] = block
 		}
-		// Delete merged basic blocks.
-		for _, node := range prim.Nodes {
-			delete(d.blocks, node)
-		}
-		// Add primitive basic block.
-		d.blocks[block.Name] = block
-	}
+
+	*/
 
 	// A single remaining basic block indicates successful control flow recovery.
 	// If more than one basic block remains, unstructured control flow is added
@@ -568,7 +572,7 @@ func (d *decompiler) stmts(block *basicBlock) []ast.Stmt {
 
 // parsePrims parses the JSON file containing a mapping of control flow
 // primitives for the given function.
-func parsePrims(srcName string, f *ir.Function) ([]*primitive.Primitive, error) {
+func parsePrims(srcName string, f *ir.Function) (*primitive.Primitives, error) {
 	graphsDir := fmt.Sprintf("%s_graphs", srcName)
 	jsonName := f.Name + ".json"
 	jsonPath := filepath.Join(graphsDir, jsonName)
@@ -585,7 +589,7 @@ func parsePrims(srcName string, f *ir.Function) ([]*primitive.Primitive, error) 
 		return prims, nil
 	}
 	// Parse primitives from file system.
-	var prims []*primitive.Primitive
+	var prims *primitive.Primitives
 	fr, err := os.Open(jsonPath)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -624,42 +628,16 @@ func locateEntryNode(g *cfg.Graph) (graph.Node, error) {
 
 // genPrims returns the high-level primitives of the given function discovered
 // by control flow analysis.
-func genPrims(f *ir.Function) ([]*primitive.Primitive, error) {
-	g := cfg.New(f)
-	entry, err := locateEntryNode(g)
-	if err != nil {
-		log.Fatalf("%+v", err)
-	}
-	var prims []*primitive.Primitive
-	for len(g.Nodes()) > 1 {
-		// Locate primitive.
-		dom := cfg.NewDom(g, entry)
-		prim, err := cfa.FindPrim(g, dom)
-		if err != nil {
-			return prims, errors.Wrap(ErrIncomplete, err.Error())
-		}
-		prims = append(prims, prim)
-		// Merge the nodes of the primitive into a single node.
-		if err := cfa.Merge(g, prim); err != nil {
-			return nil, errors.WithStack(err)
-		}
-		// Handle special case where entry node has been replaced by primitive
-		// node.
-		if !g.Has(entry) {
-			var ok bool
-			entry, ok = g.NodeByLabel(prim.Entry)
-			if !ok {
-				return nil, errors.Errorf("unable to locate entry node %q", prim.Entry)
-			}
-		}
-	}
+func genPrims(f *ir.Function) (*primitive.Primitives, error) {
+	g := cfg.NewGraphFromFunc(f)
+	prims := interval.Analyze(g)
 	return prims, nil
 }
 
 // label returns the label of the node.
 func label(n graph.Node) string {
 	if n, ok := n.(*cfg.Node); ok {
-		return n.Label
+		return n.DOTID()
 	}
 	panic(fmt.Sprintf("invalid node type; expected *cfg.Node, got %T", n))
 }
