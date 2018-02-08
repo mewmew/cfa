@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/graphism/exp/cfg"
-	"github.com/kr/pretty"
 	"github.com/mewmew/cfa/interval"
 	"github.com/pkg/errors"
 )
@@ -25,6 +24,19 @@ func restructure(dotPath string) error {
 		return errors.WithStack(err)
 	}
 	interval.Analyze(g)
-	pretty.Println("nodes:", cfg.SortByRevPost(g.Nodes()))
+	/*
+		for _, n := range cfg.SortByRevPost(g.Nodes()) {
+			pretty.Println("node:", n)
+			if n.LoopHead != nil {
+				pretty.Println("   LoopHead:", n.LoopHead.DOTID())
+			}
+			if n.Latch != nil {
+				pretty.Println("   Latch:", n.Latch.DOTID())
+			}
+			if n.LoopFollow != nil {
+				pretty.Println("   LoopFollow:", n.LoopFollow.DOTID())
+			}
+		}
+	*/
 	return nil
 }
