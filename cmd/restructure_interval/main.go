@@ -1,11 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 
 	"github.com/graphism/exp/cfg"
-	"github.com/kr/pretty"
 	"github.com/mewmew/cfa/interval"
 	"github.com/pkg/errors"
 )
@@ -25,22 +26,10 @@ func restructure(dotPath string) error {
 		return errors.WithStack(err)
 	}
 	prims := interval.Analyze(g)
-	for _, prim := range prims {
-		pretty.Println("prim:", prim)
+	buf, err := json.MarshalIndent(prims, "", "\t")
+	if err != nil {
+		return errors.WithStack(err)
 	}
-	/*
-		for _, n := range cfg.SortByRevPost(g.Nodes()) {
-			pretty.Println("node:", n)
-			if n.LoopHead != nil {
-				pretty.Println("   LoopHead:", n.LoopHead.DOTID())
-			}
-			if n.Latch != nil {
-				pretty.Println("   Latch:", n.Latch.DOTID())
-			}
-			if n.LoopFollow != nil {
-				pretty.Println("   LoopFollow:", n.LoopFollow.DOTID())
-			}
-		}
-	*/
+	fmt.Println(string(buf))
 	return nil
 }

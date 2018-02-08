@@ -21,14 +21,11 @@ var (
 )
 
 // Analyze analyzes the given control flow graph using the interval method.
-func Analyze(g *cfg.Graph) []Primitive {
-	var prims []Primitive
+func Analyze(g *cfg.Graph) *Primitives {
+	prims := &Primitives{}
 	dom := path.Dominators(g.Entry(), g)
 	// Structure loops.
-	loops := structLoop(g, dom)
-	for _, loop := range loops {
-		prims = append(prims, loop)
-	}
+	prims.Loops = structLoop(g, dom)
 	// TODO: Structure if-statements.
 	return prims
 }
@@ -190,6 +187,7 @@ func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.Domina
 		follow = I.h.LoopFollow.DOTID()
 	}
 	loop := &Loop{
+		Type:   I.h.LoopType,
 		Head:   I.h.DOTID(),
 		Latch:  latch.DOTID(),
 		Follow: follow,
