@@ -2,11 +2,22 @@ package interval
 
 import (
 	"fmt"
+	"log"
+	"os"
 
 	"github.com/graphism/exp/cfg"
-	"github.com/kr/pretty"
+	"github.com/mewkiz/pkg/term"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/path"
+)
+
+var (
+	// dbg represents a logger with the "interval:" prefix, which logs debug
+	// messages to standard error.
+	dbg = log.New(os.Stderr, term.BlueBold("interval:")+" ", 0)
+	// warn represents a logger with the "interval:" prefix, which logs warnings
+	// to standard error.
+	warn = log.New(os.Stderr, term.RedBold("interval:")+" ", 0)
 )
 
 // Analyze analyzes the given control flow graph using the interval method.
@@ -21,14 +32,24 @@ func Analyze(g *cfg.Graph) {
 
 // structLoop structures loops in the given control flow graph.
 func structLoop(g *cfg.Graph, dom path.DominatorTree) {
+	// Note, the call to DerivedSeq initiates the reverse post-order number of
+	// each node.
 	// For all derived sequences G_i.
 	Gs, IIs := DerivedSeq(g)
-	for i := range Gs {
+	for i, Gi := range Gs {
+		// TODO: Remove when cfa has matured. Useful for debugging.
+		//if err := ioutil.WriteFile(fmt.Sprintf("G_%d.dot", i), []byte(Gs[i].String()), 0644); err != nil {
+		//	log.Fatalf("%+v", err)
+		//}
 		// For all intervals I_i of G_i.
 		for _, I := range IIs[i] {
 			// Find greatest enclosing back edge (if any).
 			var latch *cfg.Node
-			for _, pred := range cfg.SortByRevPost(g.To(I.h)) {
+			for _, pred := range cfg.SortByRevPost(Gi.To(I.h)) {
+				// TODO: Remove when cfa has matured. Useful for debugging.
+				//dbg.Printf("pred of %v: %v\n", I.h.DOTID(), pred.DOTID())
+				//dbg.Printf("I.Has(%v)=%v\n", pred.DOTID(), I.Has(pred))
+				//dbg.Printf("isBackEdge(%v, %v)=%v\n", pred.DOTID(), I.h.DOTID(), isBackEdge(pred, I.h))
 				if I.Has(pred) && isBackEdge(pred, I.h) {
 					if latch == nil {
 						latch = pred
@@ -39,11 +60,12 @@ func structLoop(g *cfg.Graph, dom path.DominatorTree) {
 			}
 			// Find nodes in the loop and the type of the loop.
 			if latch != nil {
+				dbg.Println("located latch node:", latch.DOTID())
 				// TODO: Handle case statements when implemented.
 				// Check that the node doesn't belong to another loop.
 				if latch.LoopHead == nil {
 					I.h.Latch = latch
-					findNodesInLoop(g, I, latch, dom)
+					findNodesInLoop(Gi, I, latch, dom)
 					latch.IsLatch = true
 				}
 			}
@@ -51,23 +73,23 @@ func structLoop(g *cfg.Graph, dom path.DominatorTree) {
 	}
 	// TODO: Remove debug output. Instead collect information from control flow
 	// analysis, for each derived graph G^i.
-	for i := range Gs {
-		fmt.Printf("--- [ Gs[%d] ] --------------------------\n", i)
-		fmt.Println()
-		for _, n := range cfg.SortByRevPost(Gs[i].Nodes()) {
-			pretty.Println("node:", n)
-			if n.LoopHead != nil {
-				pretty.Println("   LoopHead:", n.LoopHead.DOTID())
-			}
-			if n.Latch != nil {
-				pretty.Println("   Latch:", n.Latch.DOTID())
-			}
-			if n.LoopFollow != nil {
-				pretty.Println("   LoopFollow:", n.LoopFollow.DOTID())
-			}
-		}
-		fmt.Println()
-	}
+	//for i := range Gs {
+	//	fmt.Printf("--- [ Gs[%d] ] --------------------------\n", i)
+	//	fmt.Println()
+	//	for _, n := range cfg.SortByRevPost(Gs[i].Nodes()) {
+	//		pretty.Println("node:", n)
+	//		if n.LoopHead != nil {
+	//			pretty.Println("   LoopHead:", n.LoopHead.DOTID())
+	//		}
+	//		if n.Latch != nil {
+	//			pretty.Println("   Latch:", n.Latch.DOTID())
+	//		}
+	//		if n.LoopFollow != nil {
+	//			pretty.Println("   LoopFollow:", n.LoopFollow.DOTID())
+	//		}
+	//	}
+	//	fmt.Println()
+	//}
 }
 
 // --- [ findNodesInLoop ] -----------------------------------------------------
