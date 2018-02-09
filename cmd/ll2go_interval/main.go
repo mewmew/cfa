@@ -149,14 +149,12 @@ func ll2go(llPath string, funcNames map[string]bool) (*ast.File, error) {
 		}
 		var prims *primitive.Primitives
 		if len(f.Blocks) > 0 {
-			// TODO: Clean up parsing of primitives.
+			// Determine the control flow primitives of the function.
 			//
 			//    1. Check if JSON file present on file system
 			//    2. If present, parse prims from file and log to dbg that
 			//       primitives are read from the JSON file.
 			//    3. If not present, perform control flow analysis in memory.
-			//
-			// Move parts shared between restructure and ll2go to decomp/cfa.
 			prims, err = parsePrims(srcName, f)
 			if err != nil {
 				return nil, errors.WithStack(err)
@@ -580,15 +578,12 @@ func parsePrims(srcName string, f *ir.Function) (*primitive.Primitives, error) {
 	if !osutil.Exists(jsonPath) {
 		prims, err := genPrims(f)
 		if err != nil {
-			if errors.Cause(err) == ErrIncomplete {
-				dbg.Printf("WARNING: incomplete control flow recovery of %q", f.Name)
-			} else {
-				return nil, errors.WithStack(err)
-			}
+			return nil, errors.WithStack(err)
 		}
 		return prims, nil
 	}
 	// Parse primitives from file system.
+	dbg.Println("loading primitives:", jsonPath)
 	var prims *primitive.Primitives
 	fr, err := os.Open(jsonPath)
 	if err != nil {
