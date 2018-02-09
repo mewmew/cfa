@@ -9,7 +9,8 @@ type Primitives struct {
 	// TODO: include information about the nodes contained within each interval.
 	// Loops.
 	Loops []*Loop `json:"loops"`
-	// TODO: Add if-statements.
+	// If-statements.
+	Ifs []*If `json:"ifs"`
 }
 
 // NewPrimitives returns a new record for the control flow primitives of a
@@ -32,4 +33,14 @@ type Loop struct {
 	Follow string
 	// Nodes of the loop.
 	Nodes []string
+}
+
+// An If is 2-way conditional control flow primitive.
+type If struct {
+	// Conditional node.
+	Cond string
+	// Follow node of the 2-way conditional.
+	Follow string
+	// Unresolved nodes of the if-statement.
+	Unresolved []string
 }

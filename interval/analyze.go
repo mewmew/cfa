@@ -26,7 +26,8 @@ func Analyze(g *cfg.Graph) *primitive.Primitives {
 	prims := primitive.NewPrimitives()
 	// Structure loops.
 	structLoop(g, prims)
-	// TODO: Structure if-statements.
+	// Structure if-statements.
+	structIf(g, prims)
 	return prims
 }
 
@@ -222,6 +223,68 @@ func isBackEdge(p, s *cfg.Node) bool {
 		return true
 	}
 	return false
+}
+
+// --- [ structIf ] ------------------------------------------------------------
+
+// structIf structures if-statements in the given control flow graph.
+//
+// Pre-condition: the nodes of the graph are numbered in reverse post-order.
+func structIf(g *cfg.Graph, prims *primitive.Primitives) {
+	// TODO: Ensure that the header and latch nodes of loops are correctly
+	// labelled, so they are not considered if-statements. It is possible, quite
+	// likely even, that the current code updates n.LoopHeader for the inveral
+	// nodes, (but not the corresponding nodes in the original graph).
+
+	dom := path.Dominators(g.Entry(), g)
+	unresolved := make(map[*cfg.Node]bool)
+
+	// TODO: Verify that reverse dfsLast order = reverse post-order.
+
+	// Reverse reverse post-order (from Figure 13, 1993)
+	for _, n := range cfg.SortByPost(g.Nodes()) {
+		// TODO: Check if !(loop header) should be determined with
+		//    n.LoopHead != n
+		// rather than
+		//    n.LoopHead == nil
+
+		// 2-way condition, not loop header, not loop latch
+		if len(g.From(n)) == 2 && n.LoopHead == nil {
+			// possible follow node.
+			var follow *cfg.Node
+			followInEdges := 0
+			// find all nodes that have this node as immediate dominator.
+			for _, m := range dom.DominatedBy(n) {
+				mm := node(m)
+				nInEdges := len(g.To(mm))
+				// TODO: calculate on the fly instead of relying on isBackEdge calculation.
+				nBackEdges := mm.NBackEdges
+				if nInEdges-nBackEdges > followInEdges {
+					follow = mm
+					followInEdges = nInEdges - nBackEdges
+				}
+			}
+			dbg.Printf("follow of %v: %v\n", n.DOTID(), follow.DOTID())
+			if follow != nil && followInEdges > 1 {
+				prim := &primitive.If{
+					Cond:   n.DOTID(),
+					Follow: follow.DOTID(),
+				}
+				n.IfFollow = follow
+				// Assign the follow node to all unresolved nodes.
+				for m := range unresolved {
+					m.IfFollow = follow
+					delete(unresolved, m)
+					// TODO: Figure out the purpose of unresolved. For what type of
+					// CFGs do they appear?
+					prim.Unresolved = append(prim.Unresolved, m.DOTID())
+				}
+				prims.Ifs = append(prims.Ifs, prim)
+			} else {
+				unresolved[n] = true
+			}
+		}
+	}
 }
 
 // ### [ Helper functions ] ####################################################
