@@ -50,6 +50,13 @@ func DerivedSeq(g *cfg.Graph) ([]*cfg.Graph, [][]*Interval) {
 			// rather than
 			//    ∃ n ∉ I^{i-1}(h)
 			GNew = cfg.Merge(GNew, delNodes, newName)
+			newNode, ok := GNew.NodeWithName(newName)
+			if !ok {
+				panic(fmt.Errorf("unable to locate collapsed node %q", newName))
+			}
+			// TODO: Validate that this is a valid way to track the switch header
+			// node, when collapsing the nodes of an interval.
+			newNode.SwitchHead = I.h.SwitchHead
 		}
 		GNew.SetDOTID(fmt.Sprintf("G%d", i+1))
 		if len(GNew.Nodes()) == len(Gs[i-1].Nodes()) {
