@@ -21,6 +21,16 @@ func NewPrimitives() *Primitives {
 	}
 }
 
+// A Switch is an n-way conditional control flow primitive.
+type Switch struct {
+	// Header node of the switch statement.
+	Head string
+	// Follow node of the n-way conditional.
+	Follow string
+	// Nodes of the switch statement.
+	Nodes []string
+}
+
 // A Loop is a loop control flow primitive.
 type Loop struct {
 	// Loop type.

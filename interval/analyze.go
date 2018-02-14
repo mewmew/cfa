@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/graphism/exp/cfg"
+	"github.com/kr/pretty"
 	"github.com/mewkiz/pkg/term"
 	"github.com/mewmew/cfa/primitive"
 	"gonum.org/v1/gonum/graph"
@@ -24,15 +25,111 @@ var (
 // Analyze analyzes the given control flow graph using the interval method.
 func Analyze(g *cfg.Graph) *primitive.Primitives {
 	prims := primitive.NewPrimitives()
-	// TODO: Analyze for switch statements.
+	dom := path.Dominators(g.Entry(), g)
+	// Structure switch statements.
+	structSwitch(g, prims, dom)
 	// Structure loops.
 	structLoop(g, prims)
 	// Structure if-statements.
-	structIf(g, prims)
+	structIf(g, prims, dom)
 	return prims
 }
 
 // === [ DCC ] =================================================================
+
+// --- [ structCase ] ----------------------------------------------------------
+
+// structSwitch structures switch statements in the given control flow graph.
+func structSwitch(g *cfg.Graph, prims *primitive.Primitives, dom path.DominatorTree) {
+	// Search for case nodes in reverse post-order.
+	for _, n := range cfg.SortByRevPost(g.Nodes()) {
+		headSuccs := cfg.SortByRevPost(g.From(n))
+		if len(headSuccs) > 2 {
+			// Switch header node.
+			head := n
+			// Switch follow node.
+			var follow *cfg.Node
+			switchNodes := make(map[*cfg.Node]bool)
+			// Find descendant node which has the current header node as immediate
+			// predecessor, and is not a successor.
+			//
+			//     head
+			//    / | \
+			//    \ | /
+			//    follow
+			immedDoms := cfg.SortByRevPost(dom.DominatedBy(head))
+			for _, immedDom := range immedDoms {
+				if isSuccessor(g, immedDom, head) {
+					// Skip immediate successors of the header node.
+					continue
+				}
+				if follow == nil || len(g.To(immedDom)) > len(g.To(follow)) {
+					follow = immedDom
+				}
+			}
+			head.SwitchFollow = follow
+			// Tag nodes that belong to the switch.
+			switchNodes[head] = true
+			head.SwitchHead = head
+			traversed := make(map[*cfg.Node]bool)
+			for _, headSucc := range headSuccs {
+				flagSwitchNodes(g, dom, head, follow, headSucc, switchNodes, traversed)
+			}
+			if follow != nil {
+				follow.SwitchHead = head
+			}
+			prim := &primitive.Switch{
+				Head: head.DOTID(),
+			}
+			if follow != nil {
+				prim.Follow = follow.DOTID()
+			}
+			var ns []graph.Node
+			for n := range switchNodes {
+				ns = append(ns, n)
+			}
+			for _, n := range cfg.SortByRevPost(ns) {
+				prim.Nodes = append(prim.Nodes, n.DOTID())
+			}
+			pretty.Println("switch:", prim)
+		}
+	}
+}
+
+// --- [ tagNodesInCase  ] -----------------------------------------------------
+
+// flagSwitchNodes recursively tags nodes that belong to the switch described by
+// the map switchNodes, and the header and follow node of the switch.
+func flagSwitchNodes(g *cfg.Graph, dom path.DominatorTree, head, follow, n *cfg.Node, switchNodes map[*cfg.Node]bool, traversed map[*cfg.Node]bool) {
+	traversed[n] = true
+	if n == follow {
+		return
+	}
+	if len(g.From(n)) > 2 {
+		return
+	}
+	if immedDom := node(dom.DominatorOf(n)); !switchNodes[immedDom] {
+		return
+	}
+	switchNodes[n] = true
+	n.SwitchHead = head
+	for _, succ := range cfg.SortByRevPost(g.From(n)) {
+		if traversed[succ] {
+			continue
+		}
+		flagSwitchNodes(g, dom, head, follow, succ, switchNodes, traversed)
+	}
+}
+
+// isSuccessor reports whether n is a successor of head.
+func isSuccessor(g *cfg.Graph, n, head graph.Node) bool {
+	for _, succ := range g.From(head) {
+		if n == succ {
+			return true
+		}
+	}
+	return false
+}
 
 // --- [ structLoops ] ---------------------------------------------------------
 
@@ -74,8 +171,14 @@ func structLoop(g *cfg.Graph, prims *primitive.Primitives) {
 			}
 			// Find nodes in the loop and the type of the loop.
 			if latch != nil {
+				// Check that the latching node is at the same nesting level of case
+				// statement (if any).
 				dbg.Println("located latch node:", latch.DOTID())
-				// TODO: Handle case statements when implemented.
+				if latch.SwitchHead != nil && latch.SwitchHead == I.h.SwitchHead {
+					fmt.Println("   SKIP: latch switch head:", latch.SwitchHead.DOTID())
+					fmt.Println("   SKIP: interval head switch head:", I.h.SwitchHead.DOTID())
+					continue
+				}
 				// Check that the node doesn't belong to another loop.
 				if latch.LoopHead == nil {
 					I.h.Latch = latch
@@ -231,13 +334,12 @@ func isBackEdge(p, s *cfg.Node) bool {
 // structIf structures if-statements in the given control flow graph.
 //
 // Pre-condition: the nodes of the graph are numbered in reverse post-order.
-func structIf(g *cfg.Graph, prims *primitive.Primitives) {
+func structIf(g *cfg.Graph, prims *primitive.Primitives, dom path.DominatorTree) {
 	// TODO: Ensure that the header and latch nodes of loops are correctly
 	// labelled, so they are not considered if-statements. It is possible, quite
 	// likely even, that the current code updates n.LoopHeader for the inveral
 	// nodes, (but not the corresponding nodes in the original graph).
 
-	dom := path.Dominators(g.Entry(), g)
 	unresolved := make(map[*cfg.Node]bool)
 
 	// TODO: Verify that reverse dfsLast order = reverse post-order.
