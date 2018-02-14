@@ -24,6 +24,7 @@ var (
 // Analyze analyzes the given control flow graph using the interval method.
 func Analyze(g *cfg.Graph) *primitive.Primitives {
 	prims := primitive.NewPrimitives()
+	// TODO: Analyze for switch statements.
 	// Structure loops.
 	structLoop(g, prims)
 	// Structure if-statements.
@@ -264,8 +265,8 @@ func structIf(g *cfg.Graph, prims *primitive.Primitives) {
 					followInEdges = nInEdges - nBackEdges
 				}
 			}
-			dbg.Printf("follow of %v: %v\n", n.DOTID(), follow.DOTID())
 			if follow != nil && followInEdges > 1 {
+				dbg.Printf("follow of %v: %v\n", n.DOTID(), follow.DOTID())
 				prim := &primitive.If{
 					Cond:   n.DOTID(),
 					Follow: follow.DOTID(),
