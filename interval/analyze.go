@@ -139,11 +139,17 @@ func structLoop(g *cfg.Graph, prims *primitive.Primitives) {
 	// each node.
 	// For all derived sequences G_i.
 	Gs, IIs := DerivedSeq(g)
+	// TODO: Remove when cfa has matured. Useful for debugging.
+	//for i, Gi := range Gs {
+	//	dbg.Printf("G%d: %v\n", i, nodeNames(cfg.SortByRevPost(Gi.Nodes())))
+	//	if err := os.MkdirAll("_derived_", 0755); err != nil {
+	//		log.Fatalf("%+v", errors.WithStack(err))
+	//	}
+	//	if err := ioutil.WriteFile(fmt.Sprintf("_derived_/G_%d.dot", i), []byte(Gi.String()), 0644); err != nil {
+	//		log.Fatalf("%+v", errors.WithStack(err))
+	//	}
+	//}
 	for i, Gi := range Gs {
-		// TODO: Remove when cfa has matured. Useful for debugging.
-		//if err := ioutil.WriteFile(fmt.Sprintf("G_%d.dot", i), []byte(Gs[i].String()), 0644); err != nil {
-		//	log.Fatalf("%+v", err)
-		//}
 		// For all intervals I_i of G_i.
 		dom := path.Dominators(Gi.Entry(), Gi)
 		for j, I := range IIs[i] {
