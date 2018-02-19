@@ -2,6 +2,7 @@ package interval
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -9,9 +10,13 @@ import (
 	"github.com/kr/pretty"
 	"github.com/mewkiz/pkg/term"
 	"github.com/mewmew/cfa/primitive"
+	"github.com/pkg/errors"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/path"
 )
+
+// TODO: Remove once the package has matured.
+const debug = true
 
 var (
 	// dbg represents a logger with the "interval:" prefix, which logs debug
@@ -140,15 +145,16 @@ func structLoop(g *cfg.Graph, prims *primitive.Primitives) {
 	// For all derived sequences G_i.
 	Gs, IIs := DerivedSeq(g)
 	// TODO: Remove when cfa has matured. Useful for debugging.
-	//for i, Gi := range Gs {
-	//	dbg.Printf("G%d: %v\n", i, nodeNames(cfg.SortByRevPost(Gi.Nodes())))
-	//	if err := os.MkdirAll("_derived_", 0755); err != nil {
-	//		log.Fatalf("%+v", errors.WithStack(err))
-	//	}
-	//	if err := ioutil.WriteFile(fmt.Sprintf("_derived_/G_%d.dot", i), []byte(Gi.String()), 0644); err != nil {
-	//		log.Fatalf("%+v", errors.WithStack(err))
-	//	}
-	//}
+	if debug {
+		for i, Gi := range Gs {
+			if err := os.MkdirAll("_derived_", 0755); err != nil {
+				log.Fatalf("%+v", errors.WithStack(err))
+			}
+			if err := ioutil.WriteFile(fmt.Sprintf("_derived_/G_%d.dot", i), []byte(Gi.String()), 0644); err != nil {
+				log.Fatalf("%+v", errors.WithStack(err))
+			}
+		}
+	}
 	for i, Gi := range Gs {
 		// For all intervals I_i of G_i.
 		dom := path.Dominators(Gi.Entry(), Gi)
@@ -156,6 +162,7 @@ func structLoop(g *cfg.Graph, prims *primitive.Primitives) {
 			// Record interval information.
 			intervalName := fmt.Sprintf("G%d_I%d", i, j+1)
 			intervalNodes := nodeNames(cfg.SortByRevPost(I.Nodes()))
+			dbg.Printf("%v: %v\n", intervalName, intervalNodes)
 			if prev, ok := prims.Intervals[intervalName]; ok {
 				panic(fmt.Errorf("interval with name %q already present; prev nodes %v, new nodes %v", intervalName, prev, intervalNodes))
 			}
@@ -188,7 +195,12 @@ func structLoop(g *cfg.Graph, prims *primitive.Primitives) {
 				// Check that the node doesn't belong to another loop.
 				if latch.LoopHead == nil {
 					I.h.Latch = latch
-					loop := findNodesInLoop(Gi, I, latch, dom)
+					loop, ok := findNodesInLoop(Gi, I, latch, dom)
+					if !ok {
+						// IT is a loop but with multiple exists; structure using
+						// goto.
+						continue
+					}
 					// Record loop information.
 					prims.Loops = append(prims.Loops, loop)
 					latch.IsLatch = true // TODO: Remove if not needed.
@@ -201,8 +213,8 @@ func structLoop(g *cfg.Graph, prims *primitive.Primitives) {
 // --- [ findNodesInLoop ] -----------------------------------------------------
 
 // findNodesInLoop locates the nodes in the loop (latch, I.h) and determines the
-// type of the loop.
-func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.DominatorTree) *primitive.Loop {
+// type of the loop. The boolean return value indicates success.
+func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.DominatorTree) (*primitive.Loop, bool) {
 	// Flag nodes in loop headed by head (except header node).
 	I.h.LoopHead = I.h
 	loopNodes := make(map[*cfg.Node]bool)
@@ -296,7 +308,8 @@ func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.Domina
 			// Note, the follow node is yet to be located.
 		}
 	default:
-		panic(fmt.Errorf("support for latch node with %d successors not yet implemented", len(latchSuccs)))
+		warn.Printf("support for latch node with %d successors not yet implemented", len(latchSuccs))
+		return nil, false
 	}
 
 	// Collect information about located loop.
@@ -317,7 +330,7 @@ func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.Domina
 	for _, n := range cfg.SortByRevPost(ns) {
 		loop.Nodes = append(loop.Nodes, n.DOTID())
 	}
-	return loop
+	return loop, true
 }
 
 // --- [ isBackEdge ] ----------------------------------------------------------
