@@ -6,6 +6,8 @@ import "github.com/graphism/exp/cfg"
 type Primitives struct {
 	// map from collapsed node name to the nodes of the corresponding interval.
 	Intervals map[string][]string `json:"intervals"`
+	// Switch-statements.
+	Switches []*Switch
 	// TODO: include information about the nodes contained within each interval.
 	// Loops.
 	Loops []*Loop `json:"loops"`

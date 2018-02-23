@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/graphism/exp/cfg"
-	"github.com/kr/pretty"
 	"github.com/mewkiz/pkg/term"
 	"github.com/mewmew/cfa/primitive"
 	"github.com/pkg/errors"
@@ -16,7 +15,7 @@ import (
 )
 
 // TODO: Remove once the package has matured.
-const debug = true
+const debug = false
 
 var (
 	// dbg represents a logger with the "interval:" prefix, which logs debug
@@ -96,7 +95,8 @@ func structSwitch(g *cfg.Graph, prims *primitive.Primitives, dom path.DominatorT
 			for _, n := range cfg.SortByRevPost(ns) {
 				prim.Nodes = append(prim.Nodes, n.DOTID())
 			}
-			pretty.Println("switch:", prim)
+			//pretty.Println("switch:", prim)
+			prims.Switches = append(prims.Switches, prim)
 		}
 	}
 }
@@ -188,8 +188,8 @@ func structLoop(g *cfg.Graph, prims *primitive.Primitives) {
 				// statement (if any).
 				dbg.Println("located latch node:", latch.DOTID())
 				if latch.SwitchHead != nil && latch.SwitchHead == I.h.SwitchHead {
-					fmt.Println("   SKIP: latch switch head:", latch.SwitchHead.DOTID())
-					fmt.Println("   SKIP: interval head switch head:", I.h.SwitchHead.DOTID())
+					//fmt.Println("   SKIP: latch switch head:", latch.SwitchHead.DOTID())
+					//fmt.Println("   SKIP: interval head switch head:", I.h.SwitchHead.DOTID())
 					continue
 				}
 				// Check that the node doesn't belong to another loop.
