@@ -56,7 +56,9 @@ func TestIntervals(t *testing.T) {
 			// TODO: Update test to randomize node order. Then make sure the
 			// intervals are calculated independent of what g.Nodes() returns. Use
 			// reverse post-order.
-			for _, n := range intervals[i].Nodes() {
+			nodes := intervals[i].Nodes()
+			for nodes.Next() {
+				n := nodes.Node()
 				nn, ok := n.(*cfg.Node)
 				if !ok {
 					panic(fmt.Errorf("invalid node type; expected *cfg.Node, got %T", n))

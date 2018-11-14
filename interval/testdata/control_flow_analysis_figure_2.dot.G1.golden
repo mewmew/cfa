@@ -1,4 +1,4 @@
-digraph G1 {
+strict digraph G1 {
 	// Node definitions.
 	1 [label=entry];
 	2;

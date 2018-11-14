@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"sort"
 
+	"gonum.org/v1/gonum/graph/iterator"
+
 	"github.com/graphism/exp/cfg"
 	"gonum.org/v1/gonum/graph"
 )
@@ -34,7 +36,7 @@ func Intervals(g *cfg.Graph) []*Interval {
 		//    no more nodes can be added to I(n)
 		for added := true; added; {
 			added = false
-			for _, m := range cfg.SortByRevPost(g.Nodes()) {
+			for _, m := range cfg.SortByRevPost(graph.NodesOf(g.Nodes())) {
 				if I.nodes[m] {
 					continue
 				}
@@ -47,14 +49,16 @@ func Intervals(g *cfg.Graph) []*Interval {
 			}
 		}
 		// H = H + {m ∈ G : m ∉ H and m ∉ I(n) and (∃ p = immedPred(m) : p ∈ I(n))}
-		for _, m := range cfg.SortByRevPost(g.Nodes()) {
+		for _, m := range cfg.SortByRevPost(graph.NodesOf(g.Nodes())) {
 			if H.has(m) {
 				continue
 			}
 			if I.Has(m) {
 				continue
 			}
-			for _, p := range g.To(m.ID()) {
+			pNodes := g.To(m.ID())
+			for pNodes.Next() {
+				p := pNodes.Node()
 				if I.Has(p) {
 					H.push(node(m))
 					break
@@ -88,21 +92,21 @@ func (I *Interval) Has(n graph.Node) bool {
 }
 
 // Nodes returns the nodes of the interval.
-func (I *Interval) Nodes() []graph.Node {
+func (I *Interval) Nodes() graph.Nodes {
 	var nodes []graph.Node
 	for node := range I.nodes {
 		nodes = append(nodes, node)
 	}
-	return nodes
+	return iterator.NewOrderedNodes(nodes)
 }
 
 // From returns all nodes that can be reached directly from the given node.
-func (I *Interval) From(n graph.Node) []graph.Node {
+func (I *Interval) From(n graph.Node) graph.Nodes {
 	return I.g.From(n.ID())
 }
 
 // To returns all nodes that can reach directly to the given node.
-func (I *Interval) To(n graph.Node) []graph.Node {
+func (I *Interval) To(n graph.Node) graph.Nodes {
 	return I.g.To(n.ID())
 }
 
@@ -141,12 +145,13 @@ func newInterval(g *cfg.Graph, h *cfg.Node) *Interval {
 // predecessors of n and n has at least one predecessor.
 func (I *Interval) containsAllPreds(n graph.Node) bool {
 	preds := I.To(n)
-	if len(preds) == 0 {
+	if preds.Len() == 0 {
 		// Ignore nodes without predecessors (e.g. entry node); otherwise they
 		// would be added to every interval.
 		return false
 	}
-	for _, p := range preds {
+	for preds.Next() {
+		p := preds.Node()
 		if !I.Has(p) {
 			return false
 		}

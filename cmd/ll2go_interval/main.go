@@ -609,9 +609,11 @@ var ErrIncomplete = goerrors.New("incomplete control flow recovery")
 // edges.
 func locateEntryNode(g *cfg.Graph) (graph.Node, error) {
 	var entry graph.Node
-	for _, n := range g.Nodes() {
+	nodes := g.Nodes()
+	for nodes.Next() {
+		n := nodes.Node()
 		preds := g.To(n.ID())
-		if len(preds) == 0 {
+		if preds.Len() == 0 {
 			if entry != nil {
 				return nil, errors.Errorf("more than one candidate for the entry node located; prev %q, new %q", label(entry), label(n))
 			}

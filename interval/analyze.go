@@ -46,8 +46,8 @@ func Analyze(g *cfg.Graph) *primitive.Primitives {
 // structSwitch structures switch statements in the given control flow graph.
 func structSwitch(g *cfg.Graph, prims *primitive.Primitives, dom path.DominatorTree) {
 	// Search for case nodes in reverse post-order.
-	for _, n := range cfg.SortByRevPost(g.Nodes()) {
-		headSuccs := cfg.SortByRevPost(g.From(n.ID()))
+	for _, n := range cfg.SortByRevPost(graph.NodesOf(g.Nodes())) {
+		headSuccs := cfg.SortByRevPost(graph.NodesOf(g.From(n.ID())))
 		if len(headSuccs) > 2 {
 			// Switch header node.
 			head := n
@@ -67,7 +67,7 @@ func structSwitch(g *cfg.Graph, prims *primitive.Primitives, dom path.DominatorT
 					// Skip immediate successors of the header node.
 					continue
 				}
-				if follow == nil || len(g.To(immedDom.ID())) > len(g.To(follow.ID())) {
+				if follow == nil || g.To(immedDom.ID()).Len() > g.To(follow.ID()).Len() {
 					follow = immedDom
 				}
 			}
@@ -110,7 +110,7 @@ func flagSwitchNodes(g *cfg.Graph, dom path.DominatorTree, head, follow, n *cfg.
 	if n == follow {
 		return
 	}
-	if len(g.From(n.ID())) > 2 {
+	if g.From(n.ID()).Len() > 2 {
 		return
 	}
 	if immedDom := node(dom.DominatorOf(n)); !switchNodes[immedDom] {
@@ -118,7 +118,7 @@ func flagSwitchNodes(g *cfg.Graph, dom path.DominatorTree, head, follow, n *cfg.
 	}
 	switchNodes[n] = true
 	n.SwitchHead = head
-	for _, succ := range cfg.SortByRevPost(g.From(n.ID())) {
+	for _, succ := range cfg.SortByRevPost(graph.NodesOf(g.From(n.ID()))) {
 		if traversed[succ] {
 			continue
 		}
@@ -128,7 +128,9 @@ func flagSwitchNodes(g *cfg.Graph, dom path.DominatorTree, head, follow, n *cfg.
 
 // isSuccessor reports whether n is a successor of head.
 func isSuccessor(g *cfg.Graph, n, head graph.Node) bool {
-	for _, succ := range g.From(head.ID()) {
+	succNodes := g.From(head.ID())
+	for succNodes.Next() {
+		succ := succNodes.Node()
 		if n == succ {
 			return true
 		}
@@ -161,7 +163,7 @@ func structLoop(g *cfg.Graph, prims *primitive.Primitives) {
 		for j, I := range IIs[i] {
 			// Record interval information.
 			intervalName := fmt.Sprintf("G%d_I%d", i, j+1)
-			intervalNodes := nodeNames(cfg.SortByRevPost(I.Nodes()))
+			intervalNodes := nodeNames(cfg.SortByRevPost(graph.NodesOf(I.Nodes())))
 			dbg.Printf("%v: %v\n", intervalName, intervalNodes)
 			if prev, ok := prims.Intervals[intervalName]; ok {
 				panic(fmt.Errorf("interval with name %q already present; prev nodes %v, new nodes %v", intervalName, prev, intervalNodes))
@@ -169,7 +171,7 @@ func structLoop(g *cfg.Graph, prims *primitive.Primitives) {
 			prims.Intervals[intervalName] = intervalNodes
 			// Find greatest enclosing back edge (if any).
 			var latch *cfg.Node
-			for _, pred := range cfg.SortByRevPost(Gi.To(I.h.ID())) {
+			for _, pred := range cfg.SortByRevPost(graph.NodesOf(Gi.To(I.h.ID()))) {
 				// TODO: Remove when cfa has matured. Useful for debugging.
 				//dbg.Printf("pred of %v: %v\n", I.h.DOTID(), pred.DOTID())
 				//dbg.Printf("I.Has(%v)=%v\n", pred.DOTID(), I.Has(pred))
@@ -218,7 +220,7 @@ func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.Domina
 	// Flag nodes in loop headed by head (except header node).
 	I.h.LoopHead = I.h
 	loopNodes := make(map[*cfg.Node]bool)
-	for _, n := range cfg.SortByRevPost(I.Nodes()) {
+	for _, n := range cfg.SortByRevPost(graph.NodesOf(I.Nodes())) {
 		if n == I.h {
 			// skip header node.
 			continue
@@ -240,9 +242,9 @@ func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.Domina
 	}
 
 	// Determine the type of the loop and the follow node.
-	headSuccs := g.From(I.h.ID())
+	headSuccs := graph.NodesOf(g.From(I.h.ID()))
 	latchSuccs := g.From(latch.ID())
-	switch len(latchSuccs) {
+	switch latchSuccs.Len() {
 	// latch = 2-way
 	case 2:
 		latchTrueTarget, latchFalseTarget := g.TrueTarget(latch), g.FalseTarget(latch)
@@ -308,7 +310,7 @@ func findNodesInLoop(g *cfg.Graph, I *Interval, latch *cfg.Node, dom path.Domina
 			// Note, the follow node is yet to be located.
 		}
 	default:
-		warn.Printf("support for latch node with %d successors not yet implemented", len(latchSuccs))
+		warn.Printf("support for latch node with %d successors not yet implemented", latchSuccs.Len())
 		return nil, false
 	}
 
@@ -364,21 +366,21 @@ func structIf(g *cfg.Graph, prims *primitive.Primitives, dom path.DominatorTree)
 	// TODO: Verify that reverse dfsLast order = reverse post-order.
 
 	// Reverse reverse post-order (from Figure 13, 1993)
-	for _, n := range cfg.SortByPost(g.Nodes()) {
+	for _, n := range cfg.SortByPost(graph.NodesOf(g.Nodes())) {
 		// TODO: Check if !(loop header) should be determined with
 		//    n.LoopHead != n
 		// rather than
 		//    n.LoopHead == nil
 
 		// 2-way condition, not loop header, not loop latch
-		if len(g.From(n.ID())) == 2 && n.LoopHead == nil {
+		if g.From(n.ID()).Len() == 2 && n.LoopHead == nil {
 			// possible follow node.
 			var follow *cfg.Node
 			followInEdges := 0
 			// find all nodes that have this node as immediate dominator.
 			for _, m := range dom.DominatedBy(n) {
 				mm := node(m)
-				nInEdges := len(g.To(mm.ID()))
+				nInEdges := g.To(mm.ID()).Len()
 				// TODO: calculate on the fly instead of relying on isBackEdge calculation.
 				nBackEdges := mm.NBackEdges
 				if nInEdges-nBackEdges > followInEdges {

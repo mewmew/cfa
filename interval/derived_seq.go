@@ -30,7 +30,9 @@ func DerivedSeq(g *cfg.Graph) ([]*cfg.Graph, [][]*Interval) {
 		GNew := Gs[i-1]
 		for j, I := range IIs[i-1] {
 			delNodes := make(map[string]bool)
-			for _, n := range I.Nodes() {
+			Inodes := I.Nodes()
+			for Inodes.Next() {
+				n := Inodes.Node()
 				delNodes[dotID(n)] = true
 			}
 			newName := fmt.Sprintf("G%d_I%d", i, j+1)
@@ -59,7 +61,7 @@ func DerivedSeq(g *cfg.Graph) ([]*cfg.Graph, [][]*Interval) {
 			newNode.SwitchHead = I.h.SwitchHead
 		}
 		GNew.SetDOTID(fmt.Sprintf("G%d", i+1))
-		if len(GNew.Nodes()) == len(Gs[i-1].Nodes()) {
+		if GNew.Nodes().Len() == Gs[i-1].Nodes().Len() {
 			break
 		}
 		Gs = append(Gs, GNew)
