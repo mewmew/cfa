@@ -54,7 +54,7 @@ func Intervals(g *cfg.Graph) []*Interval {
 			if I.Has(m) {
 				continue
 			}
-			for _, p := range g.To(m) {
+			for _, p := range g.To(m.ID()) {
 				if I.Has(p) {
 					H.push(node(m))
 					break
@@ -98,12 +98,12 @@ func (I *Interval) Nodes() []graph.Node {
 
 // From returns all nodes that can be reached directly from the given node.
 func (I *Interval) From(n graph.Node) []graph.Node {
-	return I.g.From(n)
+	return I.g.From(n.ID())
 }
 
 // To returns all nodes that can reach directly to the given node.
 func (I *Interval) To(n graph.Node) []graph.Node {
-	return I.g.To(n)
+	return I.g.To(n.ID())
 }
 
 // String returns a string representation of the interval.

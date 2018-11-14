@@ -7,7 +7,7 @@ type Primitives struct {
 	// map from collapsed node name to the nodes of the corresponding interval.
 	Intervals map[string][]string `json:"intervals"`
 	// Switch-statements.
-	Switches []*Switch
+	Switches []*Switch `json:"switches"`
 	// TODO: include information about the nodes contained within each interval.
 	// Loops.
 	Loops []*Loop `json:"loops"`
@@ -26,33 +26,33 @@ func NewPrimitives() *Primitives {
 // A Switch is an n-way conditional control flow primitive.
 type Switch struct {
 	// Header node of the switch statement.
-	Head string
+	Head string `json:"head"`
 	// Follow node of the n-way conditional.
-	Follow string
+	Follow string `json:"follow"`
 	// Nodes of the switch statement.
-	Nodes []string
+	Nodes []string `json:"nodes"`
 }
 
 // A Loop is a loop control flow primitive.
 type Loop struct {
 	// Loop type.
-	Type cfg.LoopType
+	Type cfg.LoopType `json:"type"`
 	// Header of the loop.
-	Head string
+	Head string `json:"head"`
 	// Latch node of the loop.
-	Latch string
+	Latch string `json:"latch"`
 	// Follow node of the loop.
-	Follow string
+	Follow string `json:"follow"`
 	// Nodes of the loop.
-	Nodes []string
+	Nodes []string `json:"nodes"`
 }
 
 // An If is 2-way conditional control flow primitive.
 type If struct {
 	// Conditional node.
-	Cond string
+	Cond string `json:"cond"`
 	// Follow node of the 2-way conditional.
-	Follow string
+	Follow string `json:"follow"`
 	// Unresolved nodes of the if-statement.
-	Unresolved []string
+	Unresolved []string `json:"unresolved"`
 }
