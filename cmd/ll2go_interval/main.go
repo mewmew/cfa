@@ -160,7 +160,7 @@ func ll2go(llPath string, funcNames map[string]bool) (*ast.File, error) {
 				return nil, errors.WithStack(err)
 			}
 		}
-		dbg.Printf("decompiling function %q.", f.Name)
+		dbg.Printf("decompiling function %q.", f.Ident())
 		fn, err := d.funcDecl(f, prims)
 		if err != nil {
 			return nil, errors.WithStack(err)
