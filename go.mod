@@ -1,9 +1,11 @@
 module github.com/mewmew/cfa
 
+go 1.12
+
 require (
-	github.com/graphism/exp v0.0.0-20181114155108-95804a9f182b
-	github.com/llir/llvm v0.3.0-pre1
-	github.com/mewkiz/pkg v0.0.0-20181108225906-b4dee0c4e703
+	github.com/graphism/exp v0.0.0-20181208150744-60e1f9ae6685
+	github.com/llir/llvm v0.3.0-pre4
+	github.com/mewkiz/pkg v0.0.0-20181119122551-9729f4f4ff2b
 	github.com/pkg/errors v0.8.0
-	gonum.org/v1/gonum v0.0.0-20181112092319-eb6a40d81aaf
+	gonum.org/v1/gonum v0.0.0-20181208091643-b71a28080e0f
 )
