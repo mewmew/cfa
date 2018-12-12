@@ -331,7 +331,7 @@ func (d *decompiler) exprGetElementPtr(expr *constant.ExprGetElementPtr) ast.Exp
 	for _, index := range expr.Indices {
 		src = &ast.IndexExpr{
 			X:     src,
-			Index: d.constant(index.Index),
+			Index: d.constant(index),
 		}
 	}
 	e := &ast.UnaryExpr{
