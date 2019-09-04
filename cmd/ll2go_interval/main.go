@@ -117,7 +117,7 @@ func ll2go(llPath string, funcNames map[string]bool) (*ast.File, error) {
 	}
 
 	// Get functions set by `-funcs` or all functions if `-funcs` not used.
-	var funcs []*ir.Function
+	var funcs []*ir.Func
 	for _, f := range module.Funcs {
 		if len(funcNames) > 0 && !funcNames[f.GlobalName] {
 			dbg.Printf("skipping function %q.", f.Ident())
@@ -342,7 +342,7 @@ func (d *decompiler) pointerToConst(c constant.Constant) ast.Expr {
 	case *ir.Global:
 		// TODO: Check if `&g` should be returned instead of `g`.
 		return d.globalIdent(c.GlobalName)
-	case *ir.Function:
+	case *ir.Func:
 		// TODO: Check if `&f` should be returned instead of `f`.
 		return d.globalIdent(c.GlobalName)
 	// Constant expressions
@@ -355,7 +355,7 @@ func (d *decompiler) pointerToConst(c constant.Constant) ast.Expr {
 
 // funcDecl converts the given LLVM IR function into a corresponding Go function
 // declaration.
-func (d *decompiler) funcDecl(f *ir.Function, prims *primitive.Primitives) (*ast.FuncDecl, error) {
+func (d *decompiler) funcDecl(f *ir.Func, prims *primitive.Primitives) (*ast.FuncDecl, error) {
 	// Force generate local IDs.
 	_ = f.String()
 
@@ -376,7 +376,7 @@ func (d *decompiler) funcDecl(f *ir.Function, prims *primitive.Primitives) (*ast
 	// Reset basic block mapping.
 	d.blocks = make(map[string]*basicBlock)
 	for i, block := range f.Blocks {
-		d.blocks[block.LocalName] = &basicBlock{BasicBlock: block, num: i}
+		d.blocks[block.LocalName] = &basicBlock{Block: block, num: i}
 	}
 
 	// Record outgoing PHI values.
@@ -519,7 +519,7 @@ func (d *decompiler) value(v value.Value) ast.Expr {
 	switch v := v.(type) {
 	case value.Named:
 		switch v.(type) {
-		case *ir.Global, *ir.Function:
+		case *ir.Global, *ir.Func:
 			return d.globalIdent(v.Name())
 		default:
 			return d.localIdent(v.Name())
@@ -551,7 +551,7 @@ func (d *decompiler) uintLit(i uint64) ast.Expr {
 // basicBlock represents a conceptual basic block, that may contain both LLVM IR
 // instructions and Go statements.
 type basicBlock struct {
-	*ir.BasicBlock
+	*ir.Block
 	// Go statements.
 	stmts []ast.Stmt
 	// Outgoing values for PHI instructions. In other words, a list of assignment
@@ -582,7 +582,7 @@ func (d *decompiler) stmts(block *basicBlock) []ast.Stmt {
 
 // parsePrims parses the JSON file containing a mapping of control flow
 // primitives for the given function.
-func parsePrims(srcName string, f *ir.Function) (*primitive.Primitives, error) {
+func parsePrims(srcName string, f *ir.Func) (*primitive.Primitives, error) {
 	graphsDir := fmt.Sprintf("%s_graphs", srcName)
 	jsonName := f.GlobalName + ".json"
 	jsonPath := filepath.Join(graphsDir, jsonName)
@@ -637,7 +637,7 @@ func locateEntryNode(g *cfg.Graph) (graph.Node, error) {
 
 // genPrims returns the high-level primitives of the given function discovered
 // by control flow analysis.
-func genPrims(f *ir.Function) (*primitive.Primitives, error) {
+func genPrims(f *ir.Func) (*primitive.Primitives, error) {
 	g := cfg.NewGraphFromFunc(f)
 	prims := interval.Analyze(g)
 	return prims, nil
